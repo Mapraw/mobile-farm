@@ -1,0 +1,326 @@
+<!DOCTYPE html>
+<html lang="th">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>CA Week 21–30 Y69 — Farm Dashboard</title>
+<script src="https://cdn.jsdelivr.net/npm/chart.js@4.4.1/dist/chart.umd.min.js"></script>
+<script src="https://cdn.sheetjs.com/xlsx-0.20.2/package/dist/xlsx.full.min.js"></script>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=Mitr:wght@400;500;600&family=Prompt:wght@400;500;600;700&display=swap" rel="stylesheet">
+<style>
+  :root { --bg:#FFF8F1; --card:#fff; --ink:#4A3F55; --muted:#9A8FA8;
+    --pink:#F472A0; --peach:#FB923C; --lav:#A78BFA; --mint:#34D399; --wine:#9D2C5E; }
+  * { box-sizing:border-box; }
+  body { margin:0; font-family:"Prompt","Segoe UI",Tahoma,sans-serif;
+    background:linear-gradient(180deg,#FFF8F1 0%,#FDF1E8 60%,#FAE9DE 100%);
+    color:var(--ink); min-height:100vh; }
+  header { background:linear-gradient(120deg,#F9A8D4 0%,#FDBA74 55%,#C4B5FD 100%);
+    padding:36px 20px 42px; position:relative; overflow:hidden; }
+  header::before { content:"🌾"; position:absolute; right:6%; top:8px; font-size:64px; opacity:.35; transform:rotate(12deg); }
+  header::after { content:"🥚"; position:absolute; right:16%; bottom:6px; font-size:40px; opacity:.35; }
+  header .head { display:flex; gap:16px; align-items:center; }
+  .mascot { font-size:44px; background:rgba(255,255,255,.6); border-radius:50%;
+    width:78px; height:78px; display:flex; align-items:center; justify-content:center;
+    flex:none; box-shadow:0 6px 16px rgba(157,44,94,.25); }
+  header h1 { font-family:"Mitr","Prompt",sans-serif; margin:0; font-size:27px; color:#5C1A3D; font-weight:600; }
+  header h1 .yr { font-size:14px; background:rgba(255,255,255,.65); border-radius:999px;
+    padding:3px 12px; vertical-align:middle; white-space:nowrap; }
+  header p { margin:6px 0 0; color:#6B2B4D; opacity:.85; font-size:13.5px; }
+  .badges { display:flex; gap:8px; margin-top:10px; flex-wrap:wrap; }
+  .badge { background:rgba(255,255,255,.7); border-radius:999px; padding:5px 14px;
+    font-size:12.5px; font-weight:600; color:#5C1A3D; }
+  .wrap { max-width:1150px; margin:0 auto; padding:20px; }
+  .toolbar { display:flex; flex-wrap:wrap; gap:10px; align-items:center; margin:12px 0 18px; }
+  button { border:0; border-radius:999px; padding:12px 26px; font-size:14px; cursor:pointer;
+    font-weight:600; font-family:inherit; transition:transform .12s; }
+  button:hover { transform:translateY(-1px); }
+  .btn-download { background:linear-gradient(120deg,var(--pink),var(--peach)); color:#fff;
+    box-shadow:0 4px 14px rgba(244,114,160,.45); }
+  .meta { font-size:13px; color:var(--muted); }
+  .dropzone { border:2px dashed #F9A8D4; border-radius:20px; background:#FFF0F6; padding:22px;
+    text-align:center; cursor:pointer; transition:border-color .15s, background .15s, transform .15s; margin:18px 0 4px; }
+  .dropzone:hover { border-color:var(--pink); background:#FDE2EE; }
+  .dropzone.dragover { border-color:var(--pink); background:#FBD3E4; transform:scale(1.005); }
+  .dropzone .dz-icon { font-size:32px; }
+  .dropzone .dz-title { font-size:15px; font-weight:700; color:var(--wine); margin-top:6px; }
+  .dropzone .dz-sub { font-size:12.5px; color:var(--muted); margin-top:4px; }
+  .dropzone .dz-file { font-size:12.5px; color:var(--green,#16a34a); font-weight:600; margin-top:6px; }
+  .cards { display:grid; grid-template-columns:repeat(auto-fit,minmax(210px,1fr)); gap:14px; margin:16px 0; }
+  .card { border-radius:20px; padding:14px 16px; display:flex; gap:12px; align-items:center;
+    box-shadow:0 4px 14px rgba(244,114,160,.12); border:1px solid rgba(255,255,255,.8); }
+  .card .bubble { font-size:24px; width:50px; height:50px; border-radius:17px; flex:none;
+    display:flex; align-items:center; justify-content:center; background:rgba(255,255,255,.75);
+    box-shadow:inset 0 0 0 1px rgba(255,255,255,.6); }
+  .tint-pink { background:#FDE6EF; } .tint-peach { background:#FDEBD7; }
+  .tint-mint { background:#D8F5E5; } .tint-lav { background:#E6DFFD; }
+  .card .k { font-size:12px; color:#7C6F8A; font-weight:500; }
+  .card .v { font-size:21px; font-weight:600; margin-top:2px; font-family:"Mitr","Prompt",sans-serif; color:#3F3350; }
+  .panel { background:var(--card); border-radius:22px; padding:22px; margin:18px 0;
+    box-shadow:0 6px 20px rgba(190,150,200,.13); border:1px solid #FBEEDF; }
+  .panel h2 { font-family:"Mitr","Prompt",sans-serif; font-weight:500; margin:0 0 4px; font-size:18px; }
+  .panel p.desc { margin:0 0 12px; font-size:13px; color:var(--muted); }
+  .chart-box { position:relative; height:340px; }
+  table { width:100%; border-collapse:collapse; font-size:12.5px; }
+  th, td { border:1px solid #FBE9DC; padding:7px 9px; text-align:center; white-space:nowrap; }
+  th { background:#FCE3EC; color:var(--wine); font-family:"Mitr","Prompt",sans-serif;
+    font-weight:500; position:sticky; top:0; }
+  tbody tr:nth-child(even) { background:#FFFAF4; }
+  tbody tr:hover { background:#FFF0E1; }
+  .tbl-scroll { overflow:auto; max-height:420px; border-radius:16px; border:1px solid #F5DCC8; }
+  footer { text-align:center; color:var(--muted); font-size:12px; padding:24px; }
+  input[type=file] { display:none; }
+</style>
+</head>
+<body>
+<header>
+  <div class="wrap head">
+    <div class="mascot">🐥</div>
+    <div>
+      <h1>Farm Dashboard <span class="yr">CA Week 21–30 • Y69</span></h1>
+      <p>สรุปภาพรวมข้อมูลการเลี้ยงไก่เนื้อทุกฟาร์ม • ใครมีลิงก์ก็เปิดดูได้ ไม่ต้องล็อกอิน</p>
+      <div class="badges">
+        <span class="badge">🐔 <span id="farmBadge">–</span> ฟาร์ม</span>
+        <span class="badge">🌾 Broiler</span>
+        <span class="badge">📊 อัปเดตได้ทุกวัน</span>
+      </div>
+    </div>
+  </div>
+</header>
+
+<div class="wrap">
+  <div class="dropzone" id="dropzone">
+    <div class="dz-icon">📂⬆️</div>
+    <div class="dz-title">Refresh Data — ลากไฟล์บันทึกการเลี้ยง (.xlsx) มาวางที่นี่ หรือคลิกเพื่อเลือกไฟล์</div>
+    <div class="dz-sub">ไฟล์: บันทึกการเลี้ยง CA week21-30 Y69 Try_1.xlsx • อัปเดตเสร็จ กราฟ+ตารางจะเปลี่ยนทันที</div>
+    <div class="dz-file" id="dzFile"></div>
+  </div>
+  <div class="toolbar">
+    <button class="btn-download" onclick="downloadExcel()">⬇️ Download Excel (Test › Sheet2)</button>
+    <input type="file" id="fileInput" accept=".xlsx,.xls" onchange="handleUpload(event)">
+    <span class="meta" id="metaLine">กำลังโหลดข้อมูล…</span>
+    <a href="#" id="resetLink" style="display:none;font-size:12.5px;" onclick="resetSaved();return false;">↩ กลับไปใช้ข้อมูลเดิม</a>
+  </div>
+
+  <div class="cards" id="cards"></div>
+
+  <div class="panel">
+    <h2>⚖️ น้ำหนักเฉลี่ยรายสัปดาห์ vs มาตรฐาน</h2>
+    <p class="desc">มาตรฐาน: 7d = 200g • 14d = 570g • 21d = 1,100g • 28d = 1,750g • 35d = 2,520g (จากชื่อคอลัมน์ใน Sheet2)</p>
+    <div class="chart-box"><canvas id="chWeight"></canvas></div>
+  </div>
+
+  <div class="panel">
+    <h2>📊 %สูญเสียรายสัปดาห์</h2>
+    <p class="desc">คอลัมน์ %สูญเสีย 7d – 42d ของแต่ละฟาร์ม</p>
+    <div class="chart-box"><canvas id="chLossW"></canvas></div>
+  </div>
+
+  <div class="panel">
+    <h2>📈 %สูญเสียสะสม</h2>
+    <p class="desc">คอลัมน์ %สูญเสียสะสม 7d – 35d + %สูญเสียรวม ของแต่ละฟาร์ม</p>
+    <div class="chart-box"><canvas id="chLossC"></canvas></div>
+  </div>
+
+  <div class="panel">
+    <h2>📋 ตารางข้อมูล (เหมือน Test › Sheet2)</h2>
+    <p class="desc">อัปเดตไฟล์บันทึกการเลี้ยงแล้วกด Refresh Data ด้านบน ตาราง+กราฟจะอัปเดตทันที แล้วกด Download Excel เพื่อดาวน์โหลด</p>
+    <div class="tbl-scroll"><table id="dataTable"></table></div>
+  </div>
+</div>
+
+<footer>Made with 💛 for the farm • Public dashboard — anyone with the link can view &amp; download</footer>
+
+<script>
+// ---------- State ----------
+let HEADERS = [], REFS = [], ROWS = [];
+let charts = {};
+const FARM_COLORS = ['#F472A0','#FB923C','#A78BFA','#34D399','#38BDF8','#FBBF24','#F87171','#2DD4BF'];
+const STD = { w7:200, w14:570, w21:1100, w28:1750, w35:2520 };
+if (window.Chart) { Chart.defaults.font.family = "'Prompt','Segoe UI',sans-serif"; Chart.defaults.color = '#7C6F8A'; }
+
+// Column lookup by header name (Thai headers from Sheet2 row 1)
+const col = name => HEADERS.indexOf(name);
+
+// ---------- Load: saved upload first, else bundled snapshot ----------
+function loadSnapshot(){
+  fetch('data.json').then(r => r.json()).then(d => {
+    HEADERS = d.headers; REFS = d.refs; ROWS = d.rows;
+    setMeta('ข้อมูลล่าสุดจากไฟล์ • ' + ROWS.length + ' ฟาร์ม • ' + new Date().toLocaleString('th-TH'));
+    render();
+  }).catch(() => setMeta('โหลด data.json ไม่สำเร็จ — กรุณา Refresh Data เพื่ออัปโหลดไฟล์ Excel'));
+}
+try {
+  const saved = JSON.parse(localStorage.getItem('farmDashboard') || 'null');
+  if (saved && Array.isArray(saved.rows) && saved.rows.length) {
+    HEADERS = saved.headers; REFS = saved.refs; ROWS = saved.rows;
+    setMeta('ข้อมูลที่บันทึกไว้: ' + saved.file + ' • ' + ROWS.length + ' ฟาร์ม • ' + saved.time);
+    document.getElementById('dzFile').textContent = '✅ ข้อมูลที่บันทึกไว้: ' + saved.file + ' (' + ROWS.length + ' ฟาร์ม)';
+    document.getElementById('resetLink').style.display = 'inline';
+    render();
+  } else { loadSnapshot(); }
+} catch (e) { loadSnapshot(); }
+function resetSaved(){
+  localStorage.removeItem('farmDashboard');
+  document.getElementById('dzFile').textContent = '';
+  document.getElementById('resetLink').style.display = 'none';
+  loadSnapshot();
+}
+
+function setMeta(t){ document.getElementById('metaLine').textContent = t; }
+
+// ---------- Refresh: parse uploaded source workbook (via dropzone) ----------
+const dz = document.getElementById('dropzone');
+dz.addEventListener('click', () => document.getElementById('fileInput').click());
+['dragenter','dragover'].forEach(ev => dz.addEventListener(ev, e => { e.preventDefault(); dz.classList.add('dragover'); }));
+['dragleave','drop'].forEach(ev => dz.addEventListener(ev, e => { e.preventDefault(); dz.classList.remove('dragover'); }));
+dz.addEventListener('drop', e => { const f = e.dataTransfer.files && e.dataTransfer.files[0]; if (f) handleFile(f); });
+function handleUpload(ev){
+  const f = ev.target.files[0];
+  ev.target.value = '';
+  if (f) handleFile(f);
+}
+function handleFile(f){
+  document.getElementById('dzFile').textContent = '📄 ' + f.name + ' — กำลังอ่าน…';
+  const reader = new FileReader();
+  reader.onload = e => {
+    try {
+      const wb = XLSX.read(e.target.result, { type:'array', cellDates:true });
+      const rows = [];
+      wb.SheetNames.forEach(sn => {
+        const sh = wb.Sheets[sn];
+        // skip non-farm sheets (e.g. a Sheet2-style summary if user uploads test.xlsx by mistake)
+        const row = REFS.map(ref => {
+          if (ref === 'B8-1') {
+            const p = parseCellDate(sh['B8']);
+            return p ? ymd(shiftDays(p, -1)) : (sh['B8'] ? sh['B8'].v : null);
+          }
+          const c = sh[ref];
+          if (!c) return null;
+          const p = (c.t === 'd' || c.v instanceof Date) ? parseCellDate(c) : null;
+          if (p) return ymd(p);
+          return c.v;
+        });
+        if (row[col('ฟาร์ม')] != null || row.some(x => x != null)) rows.push(row);
+      });
+      if (!rows.length) { alert('ไม่พบข้อมูลในไฟล์นี้'); return; }
+      ROWS = rows;
+      try {
+        localStorage.setItem('farmDashboard', JSON.stringify({
+          headers: HEADERS, refs: REFS, rows: ROWS,
+          file: f.name, time: new Date().toLocaleString('th-TH')
+        }));
+        document.getElementById('resetLink').style.display = 'inline';
+      } catch (e) { /* storage full/blocked: session-only mode */ }
+      document.getElementById('dzFile').textContent = '✅ โหลดแล้ว: ' + f.name + ' (' + ROWS.length + ' ฟาร์ม)';
+      setMeta('Refresh จากไฟล์: ' + f.name + ' • ' + ROWS.length + ' ฟาร์ม • ' + new Date().toLocaleString('th-TH'));
+      render();
+    } catch (err) { alert('อ่านไฟล์ไม่สำเร็จ: ' + err.message); }
+  };
+  reader.readAsArrayBuffer(f);
+}
+// Dates: trust the formatted text Excel shows (c.w), fall back to serial/Date.
+// Handles Thai dd/mm/yyyy and Buddhist years (e.g. 2569 -> 2026).
+function parseCellDate(c){
+  if (!c) return null;
+  if (typeof c.w === 'string') {
+    const m = c.w.match(/^(\d{1,2})[\/\-.](\d{1,2})[\/\-.](\d{2,4})/);
+    if (m) {
+      let y = +m[3]; if (y < 100) y += 2500; if (y > 2400) y -= 543;
+      return { y: y, m: (+m[2]) - 1, d: +m[1] };
+    }
+  }
+  const v = c.v;
+  if (typeof v === 'number') {
+    const t = new Date(Date.UTC(1899, 11, 30) + Math.round(v) * 86400000);
+    return { y: t.getUTCFullYear(), m: t.getUTCMonth(), d: t.getUTCDate() };
+  }
+  if (v instanceof Date) {
+    const t = new Date(v.getTime() + 12 * 3600 * 1000); // tolerate midnight wobble
+    return { y: t.getFullYear(), m: t.getMonth(), d: t.getDate() };
+  }
+  return null;
+}
+function ymd(p){ return p.y + '-' + String(p.m+1).padStart(2,'0') + '-' + String(p.d).padStart(2,'0'); }
+function shiftDays(p, n){ const t = new Date(p.y, p.m, p.d); t.setDate(t.getDate() + n); return { y: t.getFullYear(), m: t.getMonth(), d: t.getDate() }; }
+
+// ---------- Download Excel (Test > Sheet2 format) ----------
+function downloadExcel(){
+  if (!ROWS.length) { alert('ยังไม่มีข้อมูล'); return; }
+  const aoa = [HEADERS, REFS, ...ROWS.map(r => r.map(v => (/^\d{4}-\d{2}-\d{2}$/.test(String(v||'')) ? new Date(v+'T00:00:00') : v)))];
+  const ws = XLSX.utils.aoa_to_sheet(aoa);
+  ws['!cols'] = HEADERS.map(() => ({ wch: 16 }));
+  const wb = XLSX.utils.book_new();
+  XLSX.utils.book_append_sheet(wb, ws, 'Sheet2');
+  XLSX.writeFile(wb, 'Test-Sheet2.xlsx');
+}
+
+// ---------- Render ----------
+function farmName(r){ return String(r[col('ฟาร์ม')] ?? ''); }
+function num(v){ const n = Number(v); return isFinite(n) ? n : null; }
+
+function render(){
+  renderCards(); renderTable();
+  const labels = ['7 วัน','14 วัน','21 วัน','28 วัน','35 วัน'];
+  const wKeys = ['นน. 7 วัน (200g)','นน.14วัน (570g.)','นน.21วัน (1,100g.)','นน.28วัน (1,750g.)','นน.35วัน (2,520g.)'];
+  const lwKeys = ['%สูญเสีย 7d','%สูญเสีย 14d','%สูญเสีย 21d','%สูญเสีย 28d','%สูญเสีย 35d','%สูญเสีย 42d'];
+  const lcKeys = ['%สูญเสียสะสม 7d','%สูญเสียสะสม 14d','%สูญเสียสะสม 21d','%สูญเสียสะสม 28d','%สูญเสียสะสม 35d','%สูญเสียรวม'];
+  const ds = i => ROWS.map((r,fi) => num(r[col(i)]));
+  const mk = (keys, extra=[]) => ROWS.map((r,fi) => ({
+    label: farmName(r), data: keys.map(k => num(r[col(k)])),
+    borderColor: FARM_COLORS[fi % FARM_COLORS.length],
+    backgroundColor: FARM_COLORS[fi % FARM_COLORS.length] + '33',
+    tension:.25, spanGaps:true
+  })).concat(extra);
+
+  draw('chWeight','line',labels, mk(wKeys,[{label:'มาตรฐาน',data:[STD.w7,STD.w14,STD.w21,STD.w28,STD.w35],
+    borderColor:'#111827',borderDash:[8,5],pointStyle:'rect',fill:false,tension:0}]),
+    {y:'น้ำหนัก (กรัม)'});
+  draw('chLossW','bar',['7d','14d','21d','28d','35d','42d'],
+    ROWS.map((r,fi)=>({label:farmName(r),data:lwKeys.map(k=>num(r[col(k)])),
+      backgroundColor:FARM_COLORS[fi%FARM_COLORS.length]+'cc'})),{y:'% สูญเสีย'});
+  draw('chLossC','line',['7d','14d','21d','28d','35d','รวม'],
+    mk(lcKeys),{y:'% สูญเสียสะสม'});
+}
+
+function draw(id,type,labels,datasets,axes){
+  if (charts[id]) charts[id].destroy();
+  charts[id] = new Chart(document.getElementById(id),{type,
+    data:{labels,datasets},
+    options:{responsive:true,maintainAspectRatio:false,
+      plugins:{legend:{position:'bottom'}},
+      scales:{y:{title:{display:true,text:axes.y},beginAtZero:true}}}});
+}
+
+function renderCards(){
+  const w35 = c => num(c[col('นน.35วัน (2,520g.)')]);
+  const tot = c => num(c[col('%สูญเสียรวม')]);
+  const vals35 = ROWS.map(w35).filter(v=>v!=null);
+  const avg35 = vals35.length ? Math.round(vals35.reduce((a,b)=>a+b,0)/vals35.length) : '–';
+  let best='–', bestV=Infinity;
+  ROWS.forEach(r=>{const t=tot(r); if(t!=null&&t<bestV){bestV=t;best=farmName(r);}});
+  document.getElementById('cards').innerHTML = [
+    ['🏠','tint-pink','จำนวนฟาร์ม', ROWS.length],
+    ['⚖️','tint-peach','นน.เฉลี่ย 35 วัน', vals35.length? avg35.toLocaleString()+' g' : '–'],
+    ['🎯','tint-mint','มาตรฐาน 35 วัน', STD.w35.toLocaleString()+' g'],
+    ['💚','tint-lav','สูญเสียรวมต่ำสุด', best + (bestV!==Infinity? ' ('+bestV.toFixed(2)+'%)':'')]
+  ].map(([icon,tint,k,v])=>'<div class="card '+tint+'"><div class="bubble">'+icon+'</div><div><div class="k">'+k+'</div><div class="v">'+v+'</div></div></div>').join('');
+  document.getElementById('farmBadge').textContent = ROWS.length;
+}
+
+function renderTable(){
+  const t = document.getElementById('dataTable');
+  let h = '<tr>' + HEADERS.map(x=>'<th>'+esc(x)+'</th>').join('') + '</tr>';
+  let b = ROWS.map(r=>'<tr>'+r.map(v=>'<td>'+esc(fmtCell(v))+'</td>').join('')+'</tr>').join('');
+  t.innerHTML = h + b;
+}
+function fmtCell(v){
+  if (v==null||v==='') return '–';
+  if (typeof v==='number') return Number.isInteger(v)? v.toLocaleString() : v.toFixed(2);
+  return v;
+}
+function esc(s){ return String(s).replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;'); }
+</script>
+</body>
+</html>
